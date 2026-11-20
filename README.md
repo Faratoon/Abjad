@@ -183,6 +183,7 @@ abjad/
 ├── links.html              # local link hub
 ├── serve.sh                # server launcher (port 8090)
 ├── selfcheck.mjs           # tests (Node)
+├── LICENSE                 # MIT (open source)
 ├── icon.svg / icon-192 / icon-512
 ├── fonts/
 │   ├── noto-naskh-arabic.woff2
@@ -360,6 +361,8 @@ Repo-gani waa local git repo diyaar u ah push. `gh` CLI (v2.105) waa lagu rakiba
 
 > Hadda `gh auth status` wuxuu sheegayaa **lama xirmin**. Marka hore ku bilow `gh auth login` (browser ama device code), kadib `./push-github.sh`.
 
+**Windows:** laba-guji `ABJAD-PUBLISH.bat` (Desktop) ama `PUBLISH.bat` (repo) — wuxuu kiciyaa `gh auth login`, kadib wuu abuuraa repo-ga, wuu push-gareynayaa, oo wuu daarayaa Pages.
+
 ```bash
 ./push-github.sh
 ```
@@ -433,7 +436,7 @@ Layout: mobile-first, hero leh gees amber ah iyo dhibco yar; cards radius 24px; 
 - Placement test iyo manhaj 10-level ah oo buuxa (halkan 7 cutub ayaa seed ah).
 - Speech recognition iyo pronunciation scoring.
 - Spaced repetition (SRS) oo rasmi ah.
-- Lacag/premium, leaderboard, notifications.
+- Lacag/premium iyo notifications.
 
 ---
 
@@ -442,3 +445,30 @@ Layout: mobile-first, hero leh gees amber ah iyo dhibco yar; cards radius 24px; 
 - Manhajka iyo koodhka: mashruuc asli ah oo loo sameeyay Farat.
 - Font: **Noto Naskh Arabic** © Noto Project Authors, SIL Open Font License 1.1 (`fonts/OFL.txt`).
 - Dhiirrigelin: qaabka waxbarasho ee AlifBee (**ma xirna**; ma jiro asset/koodh la koobiyaay).
+
+---
+
+## 18. Laysinka & ardayda (open source)
+
+Mashruucan wuxuu hoos yimaadaa **MIT License** (`LICENSE`) — ardaydu way:
+
+- copy-gareyn karaan,
+- fork-gareyn karaan,
+- wax ka beddeli karaan,
+- ku baran karaan,
+- u isticmaali karaan mashruuc kale,
+
+waa in ay **copyright notice**-ka iyo laysinka ku hayaan. Software-ku waa "as is" — wax dammaanad ah ma jiro.
+
+Tallaabooyin arday:
+
+```bash
+git clone https://github.com/<USER>/abjad.git
+cd abjad
+./serve.sh
+# http://localhost:8090/
+```
+
+Haddii aad faafiso version cusub, link-ka repo-ga asalka ah ku dar (credit). Font-ka **Noto Naskh Arabic** wuxuu leeyahay laysin gaar ah (OFL 1.1, `fonts/OFL.txt`).
+
+Ammaan: password-yada iyo xogta profile-ku waa localStorage, ma aha server; ha gelin xog dhab ah oo xasaasi ah.
