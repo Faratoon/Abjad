@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#103a33"/>
+  <rect x="91" y="91" width="330" height="330" rx="84" fill="#f2b53c"/>
+  <text x="256" y="342" font-family="'Noto Naskh Arabic', serif" font-size="230" font-weight="700" fill="#103a33" text-anchor="middle">أ</text>
+</svg>

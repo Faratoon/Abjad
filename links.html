@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="so">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#103a33">
+<title>ABJAD — Local links</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .hub { max-width: 980px; margin: 0 auto; padding: 1.6rem 1.1rem 4rem; }
+  .hub-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.6rem; }
+  .hub h1 { font-size: clamp(1.7rem, 5vw, 2.4rem); margin: 0; }
+  .hub .card { padding: 1.2rem 1.3rem; margin-bottom: 1rem; }
+  .hub ul { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
+  .hub a { color: var(--brand); font-weight: 600; text-decoration: none; border-bottom: 1px solid transparent; }
+  .hub a:hover { border-color: currentColor; }
+  .hub-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+  .hub-grid .card { margin: 0; }
+  .hub code { background: var(--brand-soft); color: var(--brand); border-radius: 6px; padding: 0.1rem 0.4rem; font-size: 0.82rem; }
+  .reset { background: #fff; border: 2px solid var(--line); border-radius: 999px; padding: 0.55rem 1rem; font-weight: 700; }
+  .reset:hover { border-color: var(--brand); }
+  .hub-note { color: var(--muted); font-size: 0.88rem; }
+</style>
+</head>
+<body>
+<header class="app-nav"><div class="nav-inner">
+  <a class="brand brand-sm" href="#/"><span class="brand-mark">أ</span><span class="brand-word">ABJAD</span></a>
+  <a class="btn btn-primary btn-sm" href="index.html">Bilow / Start</a>
+</div></header>
+<main class="hub">
+  <div class="hub-head">
+    <div>
+      <h1>Local links</h1>
+      <p class="hub-note">Isku xirka app-ka ABJAD ee kombuyutarkan. Link kastaa wuu shaqeeyaa marka <code>serve.sh</code> ama <code>abjad</code> la kiciyo.</p>
+    </div>
+    <button class="reset" id="reset">Nadiifi horumarka</button>
+  </div>
+
+  <section class="card">
+    <h2>App</h2>
+    <ul>
+      <li><a href="index.html">Landing / Bogga hore</a></li>
+      <li><a href="index.html#/learn">Cutubabka / Units</a></li>
+      <li><a href="index.html#/lesson/letters-1/0">Xarfaha 1 — Baro</a></li>
+      <li><a href="index.html#/lesson/food/3">Cunto — Wadahadal</a></li>
+    </ul>
+  </section>
+
+  <div class="hub-grid" id="units"></div>
+
+  <p class="hub-note">Port: <code id="port"></code> · HTTPS/PWA: isticmaal <code>http://localhost</code>, ma aha <code>file://</code>.</p>
+</main>
+<script src="curriculum.js"></script>
+<script>
+  const stages = [
+    ["Baro / Learn", "learn"],
+    ["Tijaabo / Test", "quiz"],
+    ["Qoris / Write", "write"],
+    ["Dib u celin / Recap", "recap"]
+  ];
+  document.getElementById("port").textContent = location.port || "80";
+  document.getElementById("units").innerHTML = CURRICULUM.units.map((unit) =>
+    `<section class="card"><h2>${unit.icon} ${unit.title.so}</h2><ul>` +
+    stages.map((s, i) => `<li><a href="index.html#/lesson/${unit.id}/${i}">${s[0]}</a></li>`).join("") +
+    `</ul></section>`
+  ).join("");
+  document.getElementById("reset").addEventListener("click", () => {
+    if (confirm("Horumarka XP iyo streak ma tirtirayaa?")) {
+      localStorage.removeItem("abjad.v1");
+      location.reload();
+    }
+  });
+</script>
+</body>
+</html>
