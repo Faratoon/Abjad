@@ -4,24 +4,68 @@
   const units = window.CURRICULUM.units;
   const allCards = units.reduce((list, unit) => list.concat(unit.cards), []);
   const STAGES = E.STAGES;
-  const LS_KEY = "abjad.v1";
+  const DB_KEY = "abjad.v2";
+  const LEGACY_KEY = "abjad.v1";
+  const DAY_GOAL = 600;
   const app = document.getElementById("app");
   const canSpeak = "speechSynthesis" in window;
 
-  let state = loadState();
+  let db = loadDb();
+  let state = db.currentUser ? db.users[db.currentUser] : null;
   let session = null;
+  let loginId = null;
+  let lastActivity = Date.now();
 
-  function loadState() {
-    const fresh = { lang: "en", xp: 0, streak: 0, lastDay: null, done: {} };
+  function newUser(seed) {
+    return {
+      id: seed.id, name: seed.name, avatar: seed.avatar || seed.name.charAt(0),
+      password: String(seed.password || seed.id).toLowerCase(),
+      xp: 0, streak: 0, lastDay: null, done: {}, days: {}, camels: 0
+    };
+  }
+
+  function defaultUsers() {
+    const users = {};
+    (window.ABJAD_USERS || []).forEach((seed) => { users[seed.id] = newUser(seed); });
+    return users;
+  }
+
+  function normalizeUser(raw, seed) {
+    const base = newUser(seed);
+    if (!raw || typeof raw !== "object") return base;
+    return {
+      id: base.id,
+      name: base.name,
+      avatar: typeof raw.avatar === "string" && raw.avatar ? raw.avatar : base.avatar,
+      password: typeof raw.password === "string" && raw.password ? raw.password : base.password,
+      xp: Math.max(0, Number(raw.xp) || 0),
+      streak: Math.max(0, Number(raw.streak) || 0),
+      lastDay: typeof raw.lastDay === "string" ? raw.lastDay : null,
+      done: raw.done && typeof raw.done === "object" ? raw.done : {},
+      days: raw.days && typeof raw.days === "object" ? raw.days : {},
+      camels: Math.max(0, Number(raw.camels) || 0)
+    };
+  }
+
+  function loadDb() {
+    const seeds = window.ABJAD_USERS || [];
+    const fresh = { lang: "en", currentUser: null, users: defaultUsers() };
     try {
-      const saved = JSON.parse(localStorage.getItem(LS_KEY) || "null");
-      if (!saved || typeof saved !== "object") return fresh;
+      const saved = JSON.parse(localStorage.getItem(DB_KEY) || "null");
+      if (!saved) {
+        const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || "null");
+        if (legacy && legacy.lang === "so") fresh.lang = "so";
+        return fresh;
+      }
+      if (typeof saved !== "object") return fresh;
+      const users = {};
+      seeds.forEach((seed) => {
+        users[seed.id] = normalizeUser(saved.users && saved.users[seed.id], seed);
+      });
       return {
         lang: saved.lang === "so" ? "so" : "en",
-        xp: Math.max(0, Number(saved.xp) || 0),
-        streak: Math.max(0, Number(saved.streak) || 0),
-        lastDay: typeof saved.lastDay === "string" ? saved.lastDay : null,
-        done: saved.done && typeof saved.done === "object" ? saved.done : {}
+        currentUser: users[saved.currentUser] ? saved.currentUser : null,
+        users
       };
     } catch (err) {
       return fresh;
@@ -30,14 +74,18 @@
 
   function saveState() {
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify(state));
+      localStorage.setItem(DB_KEY, JSON.stringify(db));
     } catch (err) {
       /* private mode: progress stays in memory */
     }
   }
 
+  function lang() {
+    return db.lang;
+  }
+
   function t(key, vars) {
-    const dict = window.I18N[state.lang] || window.I18N.en;
+    const dict = window.I18N[lang()] || window.I18N.en;
     let text = dict[key] != null ? dict[key] : window.I18N.en[key];
     if (text == null) text = key;
     if (vars) {
@@ -48,12 +96,12 @@
     return text;
   }
 
-  const field = (obj) => (obj && (obj[state.lang] != null ? obj[state.lang] : obj.en)) || "";
+  const field = (obj) => (obj && (obj[lang()] != null ? obj[lang()] : obj.en)) || "";
 
-  function setLang(lang) {
-    state.lang = lang === "so" ? "so" : "en";
+  function setLang(next) {
+    db.lang = next === "so" ? "so" : "en";
     saveState();
-    document.documentElement.lang = state.lang;
+    document.documentElement.lang = db.lang;
     route();
   }
 
@@ -76,8 +124,8 @@
 
   function langSwitch() {
     return '<div class="lang-switch" role="group" aria-label="' + t("common.language") + '">' +
-      '<button data-action="lang" data-lang="en" aria-pressed="' + (state.lang === "en") + '">EN</button>' +
-      '<button data-action="lang" data-lang="so" aria-pressed="' + (state.lang === "so") + '">SO</button>' +
+      '<button data-action="lang" data-lang="en" aria-pressed="' + (db.lang === "en") + '">EN</button>' +
+      '<button data-action="lang" data-lang="so" aria-pressed="' + (db.lang === "so") + '">SO</button>' +
       "</div>";
   }
 
@@ -86,10 +134,47 @@
       ? '<a class="icon-btn" href="#/learn" aria-label="' + t("common.back") + '">←</a>'
       : '<a class="brand brand-sm" href="#/"><span class="brand-mark">أ</span><span class="brand-word">ABJAD</span></a>';
     return '<header class="app-nav"><div class="nav-inner">' + left +
+      '<span class="nav-user">' + (state ? state.name : "") + "</span>" +
       '<div class="nav-stats">' +
-      '<span class="pill" title="' + t("common.streak") + '">🔥 ' + state.streak + "</span>" +
-      '<span class="pill" title="' + t("common.xp") + '">⚡ ' + state.xp + "</span>" +
-      "</div>" + langSwitch() + "</div></header>";
+      '<span class="pill" title="' + t("common.streak") + '">🔥 ' + (state ? state.streak : 0) + "</span>" +
+      '<span class="pill" title="' + t("common.xp") + '">⚡ ' + (state ? state.xp : 0) + "</span>" +
+      "</div>" +
+      '<a class="icon-btn" href="#/leaderboard" aria-label="' + t("nav.leaderboard") + '" title="' + t("nav.leaderboard") + '">🏆</a>' +
+      langSwitch() +
+      '<button class="icon-btn" type="button" data-action="logout" aria-label="' + t("nav.logout") + '" title="' + t("nav.logout") + '">🚪</button>' +
+      "</div></header>";
+  }
+
+  function authHeader() {
+    return '<header class="app-nav"><div class="nav-inner">' +
+      '<a class="brand brand-sm" href="#/"><span class="brand-mark">أ</span><span class="brand-word">ABJAD</span></a>' +
+      langSwitch() + "</div></header>";
+  }
+
+  function toast(message, kind) {
+    const el = document.createElement("div");
+    el.className = "toast" + (kind ? " toast-" + kind : "");
+    el.textContent = message;
+    document.body.appendChild(el);
+    requestAnimationFrame(function () { el.classList.add("show"); });
+    window.setTimeout(function () {
+      el.classList.remove("show");
+      window.setTimeout(function () { el.remove(); }, 300);
+    }, 4200);
+  }
+
+  function syncCamels(announce) {
+    if (!state) return 0;
+    const focus = E.qualifiedStreak(state.days || {}, E.localISO(), DAY_GOAL);
+    const earned = Math.floor(focus / 7);
+    const before = state.camels || 0;
+    if (earned > before) {
+      state.camels = earned;
+      saveState();
+      if (announce) toast("🐪 " + t("leader.camelWon"), "camel");
+      return earned - before;
+    }
+    return 0;
   }
 
   function landingHeader() {
@@ -98,8 +183,8 @@
       '<div class="nav-links">' +
       '<label class="lang-pick"><span class="sr-only">' + t("common.language") + "</span>" +
       '<select data-action="lang-select" aria-label="' + t("common.language") + '">' +
-      '<option value="en"' + (state.lang === "en" ? " selected" : "") + ">English</option>" +
-      '<option value="so"' + (state.lang === "so" ? " selected" : "") + ">Soomaali</option>" +
+      '<option value="en"' + (db.lang === "en" ? " selected" : "") + ">English</option>" +
+      '<option value="so"' + (db.lang === "so" ? " selected" : "") + ">Soomaali</option>" +
       "</select></label>" +
       '<a class="btn btn-primary btn-sm" href="#/learn">' + t("landing.cta") + "</a>" +
       "</div></div></header>";
@@ -179,6 +264,111 @@
       "</div></footer></div>";
   }
 
+  function renderLogin() {
+    if (state) {
+      if (location.hash !== "#/learn") location.hash = "#/learn";
+      return;
+    }
+    document.title = "ABJAD — " + t("login.title");
+    const ids = Object.keys(db.users);
+    const selected = loginId && db.users[loginId];
+    app.innerHTML = authHeader() + `
+      <main class="auth-wrap">
+        <div class="auth-card card">
+          <h1>${t("login.title")}</h1>
+          <p class="muted">${t("login.subtitle")}</p>
+          <p class="field-label">${t("login.choose")}</p>
+          <div class="profile-grid">
+            ${ids.map((id) => {
+              const user = db.users[id];
+              return `<button type="button" class="profile-btn ${loginId === id ? "is-active" : ""}" data-action="pick-profile" data-id="${id}">
+                <span class="profile-avatar">${user.avatar || user.name.charAt(0)}</span>
+                <span class="profile-name">${user.name}</span>
+                <span class="profile-camels">🐪 ${user.camels || 0}</span>
+              </button>`;
+            }).join("")}
+          </div>
+          <form class="login-form" data-form="login">
+            <label for="password">${t("login.password")}</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="${t("login.passwordPlaceholder")}" ${selected ? "" : "disabled"}>
+            <button class="btn btn-primary btn-block" type="submit" ${selected ? "" : "disabled"}>${t("login.submit")}</button>
+          </form>
+          <p class="login-error" id="login-error" role="alert"></p>
+          <p class="login-hint">${t("login.hint")}</p>
+          <a class="back-link" href="#/">← ${t("login.back")}</a>
+        </div>
+      </main>`;
+    document.documentElement.lang = db.lang;
+    if (selected) {
+      const input = document.getElementById("password");
+      if (input) input.focus();
+    }
+  }
+
+  function leaderRow(user, index) {
+    const today = E.localISO();
+    const focus = E.qualifiedStreak(user.days || {}, today, DAY_GOAL);
+    const minutes = Math.floor((user.days && user.days[today] ? user.days[today] : 0) / 60);
+    const me = state && user.id === state.id;
+    const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : String(index + 1);
+    return `<div class="leader-row ${me ? "is-me" : ""}">
+      <span class="rank-badge">${medal}</span>
+      <span class="leader-avatar">${user.avatar || user.name.charAt(0)}</span>
+      <div class="leader-main">
+        <strong>${user.name}${me ? ` <span class="you-tag">${t("leader.you")}</span>` : ""}</strong>
+        <span class="muted small">⚡ ${user.xp} · 🔥 ${user.streak} · ${t("leader.today", { n: minutes })}</span>
+      </div>
+      <div class="leader-trophies">
+        <span>🐪 ${user.camels || 0}</span>
+        <span class="muted small">${t("leader.progress", { n: focus % 7 || (focus ? 7 : 0) })}</span>
+      </div>
+    </div>`;
+  }
+
+  function renderLeaderboard() {
+    syncCamels(false);
+    document.title = "ABJAD — " + t("leader.title");
+    const today = E.localISO();
+    const focus = E.qualifiedStreak(state.days || {}, today, DAY_GOAL);
+    const progress = focus % 7 || (focus ? 7 : 0);
+    const minutes = Math.floor((state.days && state.days[today] ? state.days[today] : 0) / 60);
+    const users = Object.keys(db.users).map((id) => db.users[id]);
+    const sorted = users.slice().sort((a, b) =>
+      (b.camels || 0) - (a.camels || 0) || b.xp - a.xp || a.name.localeCompare(b.name)
+    );
+    app.innerHTML = appHeader(true) + `
+      <main class="wrap leaderboard">
+        <div class="dash-head">
+          <div>
+            <h1>${t("leader.title")}</h1>
+            <p class="muted">${t("leader.subtitle")}</p>
+          </div>
+          <div class="progress-card">
+            <span class="muted small">${t("leader.today", { n: minutes })}</span>
+            <strong>${t("leader.focus")}: ${focus}</strong>
+            <div class="bar"><i style="width:${Math.min(100, Math.round(((state.days[today] || 0) / DAY_GOAL) * 100))}%"></i></div>
+          </div>
+        </div>
+
+        <section class="camel-card">
+          <div class="camel-art">🐪</div>
+          <div class="camel-copy">
+            <span class="unit-badge">${t("leader.rewardTitle")}</span>
+            <h2>${t("leader.rewardText")}</h2>
+            <div class="camel-dots">${[0, 1, 2, 3, 4, 5, 6].map((i) => `<span class="camel-dot ${i < progress ? "on" : ""}"></span>`).join("")}</div>
+            <p class="muted small">${t("leader.progress", { n: progress })}</p>
+          </div>
+          <div class="camel-total"><strong>${state.camels || 0}</strong><span>🐪 ${t("leader.camels")}</span></div>
+        </section>
+
+        <section class="leader-list">${sorted.map((user, i) => leaderRow(user, i)).join("")}</section>
+
+        <div class="leader-actions">
+          <button type="button" class="btn btn-ghost-dark" data-action="change-password">🔑 ${t("leader.changePassword")}</button>
+        </div>
+      </main>`;
+  }
+
   function renderDashboard() {
     const complete = E.unitsComplete(units, state.done);
     document.title = "ABJAD — " + t("learn.title");
@@ -187,6 +377,7 @@
         <div class="dash-head">
           <div>
             <h1>${t("learn.title")}</h1>
+            <p class="user-greeting">${t("learn.welcome", { name: state.name })}</p>
             <p class="muted">${t("learn.subtitle")}</p>
           </div>
           <div class="progress-card">
@@ -226,20 +417,20 @@
   function makeSession(unit, index) {
     const stage = STAGES[index];
     const s = {
-      unitId: unit.id, stageIndex: index, stage, lang: state.lang,
+      unitId: unit.id, stageIndex: index, stage, lang: db.lang,
       i: 0, correct: 0, total: 0, answered: null, chosen: null,
       used: [], attempts: 0, feedback: null, qs: null, tasks: null,
       mode: null, line: 0, answers: {}
     };
     if (stage === "learn") s.total = unit.cards.length;
     if (stage === "quiz") {
-      s.qs = E.makeQuiz(unit.cards, allCards, state.lang, Math.random, Math.min(6, unit.cards.length));
+      s.qs = E.makeQuiz(unit.cards, allCards, db.lang, Math.random, Math.min(6, unit.cards.length));
       s.total = s.qs.length;
     }
     if (stage === "write") {
       s.tasks = E.shuffle(unit.cards, Math.random)
         .slice(0, Math.min(6, unit.cards.length))
-        .map((card) => E.makeWrite(card, allCards, Math.random, state.lang));
+        .map((card) => E.makeWrite(card, allCards, Math.random, db.lang));
       s.total = s.tasks.length;
     }
     if (stage === "recap") {
@@ -248,7 +439,7 @@
         s.total = unit.dialogue.filter((line) => line.who === "you").length;
       } else {
         s.mode = "quiz";
-        s.qs = E.makeQuiz(unit.cards, allCards, state.lang, Math.random, Math.min(8, unit.cards.length));
+        s.qs = E.makeQuiz(unit.cards, allCards, db.lang, Math.random, Math.min(8, unit.cards.length));
         s.total = s.qs.length;
       }
     }
@@ -263,7 +454,7 @@
       index = E.nextStageIndex(state.done, unit.id);
     }
     if (!session || session.unitId !== unit.id || session.stageIndex !== index ||
-        (session.lang !== state.lang && session.stage !== "result")) {
+        (session.lang !== db.lang && session.stage !== "result")) {
       session = makeSession(unit, index);
     }
     document.title = "ABJAD — " + field(unit.title);
@@ -431,7 +622,7 @@
     state.lastDay = E.localISO();
     saveState();
     session = {
-      unitId: unit.id, stageIndex: index, stage: "result", lang: state.lang,
+      unitId: unit.id, stageIndex: index, stage: "result", lang: db.lang,
       gained, correct, total
     };
     renderLesson(unit.id, index);
@@ -483,6 +674,33 @@
     if (action === "scroll-how") {
       const how = document.getElementById("how");
       if (how) how.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (action === "pick-profile") {
+      loginId = el.dataset.id;
+      renderLogin();
+      return;
+    }
+    if (action === "logout") {
+      db.currentUser = null;
+      saveState();
+      state = null;
+      session = null;
+      loginId = null;
+      location.hash = "#/login";
+      return;
+    }
+    if (action === "change-password") {
+      const next = window.prompt(t("leader.passwordPrompt"));
+      if (next === null) return;
+      const clean = next.trim();
+      if (clean.length < 4) {
+        window.alert(t("leader.passwordShort"));
+        return;
+      }
+      state.password = clean.toLowerCase();
+      saveState();
+      toast(t("leader.passwordChanged"));
       return;
     }
     if (!unit || !session) return;
@@ -606,21 +824,84 @@
     if (el && el.matches('[data-action="lang-select"]')) setLang(el.value);
   });
 
+  app.addEventListener("submit", function (event) {
+    const form = event.target.closest('[data-form="login"]');
+    if (!form) return;
+    event.preventDefault();
+    const user = loginId && db.users[loginId];
+    const input = form.querySelector('input[name="password"]');
+    const pass = (input && input.value ? input.value : "").trim().toLowerCase();
+    if (!user || pass !== String(user.password).toLowerCase()) {
+      const error = document.getElementById("login-error");
+      if (error) error.textContent = t("login.error");
+      if (input) input.select();
+      return;
+    }
+    db.currentUser = user.id;
+    state = user;
+    saveState();
+    syncCamels(false);
+    loginId = null;
+    toast(t("login.welcome", { name: user.name }));
+    location.hash = "#/learn";
+  });
+
+  function requireAuth() {
+    if (state) return true;
+    if (location.hash !== "#/login") {
+      location.hash = "#/login";
+    }
+    renderLogin();
+    return false;
+  }
+
   function route() {
     const hash = location.hash.replace(/^#\/?/, "");
     const parts = hash.split("/").filter(Boolean);
     if (parts.length === 0) return renderLanding();
-    if (parts[0] === "learn") return renderDashboard();
-    if (parts[0] === "lesson" && parts[1]) return renderLesson(parts[1], parts[2]);
+    if (parts[0] === "login") {
+      if (state) {
+        if (location.hash !== "#/learn") location.hash = "#/learn";
+        return renderDashboard();
+      }
+      return renderLogin();
+    }
+    if (parts[0] === "learn") return requireAuth() ? renderDashboard() : undefined;
+    if (parts[0] === "leaderboard") return requireAuth() ? renderLeaderboard() : undefined;
+    if (parts[0] === "lesson" && parts[1]) {
+      if (!requireAuth()) return;
+      return renderLesson(parts[1], parts[2]);
+    }
     return renderLanding();
   }
+
+  function isLearningRoute() {
+    return location.hash.indexOf("#/learn") === 0 || location.hash.indexOf("#/lesson/") === 0;
+  }
+
+  function tick() {
+    if (!state || document.visibilityState !== "visible" || !isLearningRoute()) return;
+    if (Date.now() - lastActivity > 300000) return;
+    const today = E.localISO();
+    state.days[today] = (state.days[today] || 0) + 15;
+    saveState();
+    syncCamels(true);
+  }
+
+  window.setInterval(tick, 15000);
+  ["pointerdown", "keydown", "touchstart"].forEach(function (name) {
+    document.addEventListener(name, function () { lastActivity = Date.now(); }, { passive: true });
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") lastActivity = Date.now();
+  });
 
   window.addEventListener("hashchange", function () {
     session = null;
     route();
   });
 
-  document.documentElement.lang = state.lang;
+  document.documentElement.lang = db.lang;
   route();
 
   if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) {

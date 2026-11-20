@@ -14,12 +14,18 @@ ABJAD waa **Progressive Web App (PWA)** lagu baranayo **Carabiga caadiga ah (Mod
 |---|---|
 | ![Qoris](screenshots/write.png) | ![Wadahadal](screenshots/dialogue.png) |
 
+| Login (profiles) | Leaderboard & geel |
+|---|---|
+| ![Login](screenshots/login.png) | ![Leaderboard](screenshots/leaderboard.png) |
+
 ![Mobile](screenshots/mobile.png)
 
 ---
 
 ## 1. Waxa ku jira
 
+- **4 profile carruur** — Barwaaqo, Yasin, Yahye, Yasir — mid kastaa leh password ku meel gaadh ah.
+- **Leaderboard & geel** — 7 maalmood × 10 daqiiqo = neef geel 🐪; XP iyo streak-na waa la tartamaa.
 - **7 cutub, 58 shay, 28 xaraf Carabi** oo dhamaystiran.
 - **4 marxaladood cutub kasta:**
   1. **Baro** — erey/xaraf, dhawaaq, macne, tusaale.
@@ -48,7 +54,7 @@ cd ~/abjad
 ./serve.sh
 ```
 
-Kadib fur: **<http://localhost:8090/>**
+Kadib fur: **<http://localhost:8090/>** → **Gal** → dooro profile → password-ka waa magaca profile-ka (tusaale `barwaaqo`).
 
 `serve.sh` waa idempotent: haddii server hore u shaqaynayo, isma dilo; haddii kale wuu kiciyaa oo wuxuu daabacaa linkiyada.
 
@@ -83,6 +89,8 @@ Port default: **8090**. (8080 waxaa isticmaala app kale oo `baro-soomaali` — h
 | Link | Waxa uu furayaa |
 |---|---|
 | <http://localhost:8090/> | Bogga hore / landing |
+| <http://localhost:8090/#/login> | Login / dooro profile |
+| <http://localhost:8090/#/leaderboard> | Tartanka + geel |
 | <http://localhost:8090/#/learn> | Cutubabka iyo horumarka |
 | <http://localhost:8090/#/lesson/letters-1/0> | Xarfaha 1 — Baro |
 | <http://localhost:8090/#/lesson/letters-1/1> | Xarfaha 1 — Tijaabo |
@@ -123,18 +131,53 @@ Xarfaha waxay leeyihiin **qaabab** (isolated/initial/medial/final) iyo **tusaale
 
 ---
 
-## 5. Qaab dhismeedka faylasha
+## 5. Profiles, login & leaderboard
+
+### Profiles-ka carruurta
+
+| Magac | Username | Password ku meel gaadhka |
+|---|---|---|
+| Barwaaqo | `barwaaqo` | `barwaaqo` |
+| Yasin | `yasin` | `yasin` |
+| Yahye | `yahye` | `yahye` |
+| Yasir | `yasir` | `yasir` |
+
+- Login: `#/login` → dooro profile-ka → geli password-ka.
+- Password-ku waa **case-insensitive** (`Barwaaqo` = `barwaaqo`).
+- Beddel password: leaderboard → **Beddel password** (ugu yaraan 4 xaraf).
+- Logout: badhanka 🚪 ee header-ka.
+- Profile kastaa wuxuu leeyahay XP, streak, `done`, `days` iyo `camels` **gaar**.
+- Xogtu waa **local** (localStorage); password-yadu plaintext ayay ku kaydsan yihiin — ha isticmaalin password qiiimo leh.
+- Password la iloobay: DevTools → Application → Local Storage → `abjad.v2` → `users` → `password`, ama `links.html` → reset (wax walba tirtiraya).
+
+### Leaderboard & geel
+
+- Bogga: `#/leaderboard` (ama 🏆 header-ka).
+- Kala-saarista: **geel** → **XP** → magac.
+- Hadaf: **7 maalmood oo isku xigta**, maalin kasta **10 daqiiqo** ABJAD.
+- Daqiiqadaha waxaa la tiriyaa kaliya marka profile-ku galan yahay, tab-ku muuqdo, route-ku yahay `#/learn` ama `#/lesson/...`, oo dhaqdhaqaaq dhacay 5 daqiiqo gudahood.
+- Tick = 15 ilbiriqsi; 10 daqiiqo = 600 ilbiriqsi.
+- 7 maalmood → **1 geel**; 14 → 2; 21 → 3, iwm.
+- Geel kama tago haddii streak jabo — waa trophy.
+- Marka 7-da maalmood la gaaro waxaa soo baxa toast: **"🐪 Waxaad heshay neef geel!"**
+
+> Xogtu waa qalab-kan kaliya; ma jiro server ama sync. Carruurtu waa in ay isla browser-kaas isticmaalaan.
+
+---
+
+## 6. Qaab dhismeedka faylasha
 
 ```
 abjad/
 ├── index.html              # shell-ka app-ka
 ├── styles.css              # design tokens + dhammaan styles
 ├── app.js                  # router, views, state, event handlers
-├── engine.js               # quiz/write generators, streak, progress
+├── engine.js               # quiz/write generators, streak, camel days
 ├── curriculum.js           # xogta cutubada (units/cards/dialogues)
+├── users.js                # 4 profiles (magac, password, avatar)
 ├── i18n.js                 # container-ka I18N
-├── en.js                   # 98 string Ingiriisi
-├── so.js                   # 98 string Soomaali
+├── en.js                   # 130 string Ingiriisi
+├── so.js                   # 130 string Soomaali
 ├── manifest.webmanifest    # PWA metadata
 ├── sw.js                   # offline cache
 ├── links.html              # local link hub
@@ -151,7 +194,7 @@ abjad/
 
 ---
 
-## 6. Sida loo daro cutub cusub
+## 7. Sida loo daro cutub cusub
 
 Wax ka beddel `curriculum.js`, gudaha `units`:
 
@@ -196,7 +239,7 @@ Cutub kasta oo `you` leh waa in uu leeyahay **hal** `correct: true`.
 
 ---
 
-## 7. Sida loo daro luuqad cusub
+## 8. Sida loo daro luuqad cusub
 
 Tusaale: Af-Faransiis (`fr`).
 
@@ -221,7 +264,7 @@ Tusaale: Af-Faransiis (`fr`).
 
 ---
 
-## 8. Engine-ka layliyada
+## 9. Engine-ka layliyada
 
 `engine.js` wuxuu leeyahay functions puur ah (Node iyo browser labadaba):
 
@@ -243,35 +286,42 @@ Tusaale: Af-Faransiis (`fr`).
 
 ---
 
-## 9. Horumarka (localStorage)
+## 10. Horumarka (localStorage)
 
-Key: `abjad.v1`
+Key: **`abjad.v2`** (qalab kasta oo profile ah):
 
 ```json
 {
   "lang": "en",
-  "xp": 145,
-  "streak": 4,
-  "lastDay": "2026-11-19",
-  "done": {
-    "letters-1": [0, 1, 2, 3],
-    "letters-2": [0, 1]
+  "currentUser": "barwaaqo",
+  "users": {
+    "barwaaqo": {
+      "id": "barwaaqo", "name": "Barwaaqo", "avatar": "🌸",
+      "password": "barwaaqo", "xp": 145, "streak": 4,
+      "lastDay": "2026-11-19",
+      "done": { "letters-1": [0, 1, 2, 3] },
+      "days": { "2026-11-20": 600 },
+      "camels": 1
+    }
   }
 }
 ```
 
-- `done[unitId]` waa array stage indices (0–3).
-- Nadiifi: `links.html` → **Nadiifi horumarka**, ama browser console:
+- `days[YYYY-MM-DD]` = ilbiriqsiyada waxbarasho ee maalintaas.
+- `camels` = tirada geel (7 maalmood × 10 daqiiqo).
+- `done[unitId]` = stage indices 0–3.
+- Key-ga hore `abjad.v1` waa legacy; lama tirtiro, laakiin lama isticmaalo.
+- Nadiifi: `links.html` → **Nadiifi horumarka**, ama:
   ```js
-  localStorage.removeItem("abjad.v1"); location.reload();
+  localStorage.removeItem("abjad.v2"); location.reload();
   ```
 
 ---
 
-## 10. PWA / Offline
+## 11. PWA / Offline
 
 - `manifest.webmanifest` — name `ABJAD`, icons 192/512, standalone.
-- `sw.js` — cache `abjad-v4` (index, JS, CSS, font, icons, links).
+- `sw.js` — cache `abjad-v6` (index, JS, CSS, font, icons, links, users).
 - Offline waxay u baahan tahay **http://localhost** ama HTTPS; `file://` kuma shaqayso.
 - Markaad fayl beddesho:
   1. Beddel `CACHE` version (tusaale `abjad-v5`).
@@ -280,7 +330,7 @@ Key: `abjad.v1`
 
 ---
 
-## 11. Tests
+## 12. Tests
 
 ```bash
 node selfcheck.mjs
@@ -295,13 +345,14 @@ Wuxuu qabtaa:
 - quiz: 4 options, distinct, hal correct
 - write: tiles answer reachable, wrong order rejected
 - streak cases
+- camel days (7 × 600s, gap, partial day) iyo 4 profiles
 - manifest/icons/scripts/font/SW assets jiraan
 
 > Browser E2E (Playwright) waxaa lagu sameeyay gudaha; repo-gan kuma jiro si aan dependency loo kordhin. Haddii aad rabto, `npx playwright` ayaa lagu dari karaa.
 
 ---
 
-## 12. GitHub
+## 13. GitHub
 
 Repo-gani waa local git repo diyaar u ah push. `gh` CLI (v2.105) waa lagu rakibay `~/.local/bin/gh`.
 
@@ -338,7 +389,7 @@ Pages URL: `https://<USER>.github.io/abjad/`
 
 ---
 
-## 13. Design system
+## 14. Design system
 
 Colors-ka waxaa lagu qeexay `styles.css` (`:root`):
 
@@ -359,7 +410,7 @@ Layout: mobile-first, hero leh gees amber ah iyo dhibco yar; cards radius 24px; 
 
 ---
 
-## 14. Dhibaatooyin caadi ah
+## 15. Dhibaatooyin caadi ah
 
 | Dhibaato | Xal |
 |---|---|
@@ -369,13 +420,16 @@ Layout: mobile-first, hero leh gees amber ah iyo dhibco yar; cards radius 24px; 
 | Wax hore ayaa muuqda (cache) | Hard reload; SW unregister; kordhi `CACHE` version |
 | Cod Carabi ma maqalayo | Browser voice-ka `ar-SA` ma jiro; qoraalka/transliteration isticmaal |
 | Emoji boxes | Qalabka font emoji ma leh (Windows/Android way leeyihiin) |
+| Password la iloobay | DevTools → `abjad.v2` → `users` → `password`, ama hub reset |
+| Geel ma soo baxo | Hubi 7 maalmood × 600s; daqiiqadaha waxaa la tiriyaa `#/learn`/`#/lesson` oo tab visible |
+| Leaderboard 0/7 | Daqiiqadaha maanta wali kama gaarin 10; profile-ka saxda ah geli |
 | Font Carabi qaldan | `fonts/` folder waa in uu la socdaa; hard reload |
 
 ---
 
-## 15. Wixii aan hadda ku jirin (roadmap)
+## 16. Wixii aan hadda ku jirin (roadmap)
 
-- Akoon/user sync iyo backend.
+- Cloud sync (profiles-ka hadda waa local-only).
 - Placement test iyo manhaj 10-level ah oo buuxa (halkan 7 cutub ayaa seed ah).
 - Speech recognition iyo pronunciation scoring.
 - Spaced repetition (SRS) oo rasmi ah.
@@ -383,7 +437,7 @@ Layout: mobile-first, hero leh gees amber ah iyo dhibco yar; cards radius 24px; 
 
 ---
 
-## 16. Credits
+## 17. Credits
 
 - Manhajka iyo koodhka: mashruuc asli ah oo loo sameeyay Farat.
 - Font: **Noto Naskh Arabic** © Noto Project Authors, SIL Open Font License 1.1 (`fonts/OFL.txt`).

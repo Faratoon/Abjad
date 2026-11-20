@@ -1,4 +1,4 @@
-const CACHE = "abjad-v4";
+const CACHE = "abjad-v6";
 const ASSETS = [
   "./",
   "index.html",
@@ -8,6 +8,7 @@ const ASSETS = [
   "so.js",
   "curriculum.js",
   "engine.js",
+  "users.js",
   "app.js",
   "manifest.webmanifest",
   "icon.svg",

@@ -152,6 +152,26 @@
     return units.filter((u) => stageList(done, u.id).length === STAGES.length).length;
   }
 
+  function daySeconds(days, day) {
+    return (days && Number(days[day])) || 0;
+  }
+
+  function qualifiedStreak(days, today, goal = 600) {
+    const cursor = new Date(today + "T00:00:00Z");
+    if (daySeconds(days, today) < goal) cursor.setUTCDate(cursor.getUTCDate() - 1);
+    let count = 0;
+    while (daySeconds(days, cursor.toISOString().slice(0, 10)) >= goal) {
+      count += 1;
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
+      if (count > 3650) break;
+    }
+    return count;
+  }
+
+  function camelsFromStreak(days, today, goal = 600) {
+    return Math.floor(qualifiedStreak(days, today, goal) / 7);
+  }
+
   g.AbjadEngine = {
     base,
     shuffle,
@@ -164,6 +184,9 @@
     unitPercent,
     nextStageIndex,
     unitsComplete,
+    daySeconds,
+    qualifiedStreak,
+    camelsFromStreak,
     STAGES,
     XP_CORRECT,
     XP_STAGE,

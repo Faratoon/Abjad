@@ -11,8 +11,15 @@ await import("./en.js");
 await import("./so.js");
 await import("./curriculum.js");
 await import("./engine.js");
+await import("./users.js");
 
 const I18N = globalThis.I18N;
+const USERS = globalThis.ABJAD_USERS;
+assert.equal(USERS.length, 4, "four kid profiles");
+assert.deepEqual(USERS.map((u) => u.name), ["Barwaaqo", "Yasin", "Yahye", "Yasir"]);
+for (const user of USERS) {
+  assert.equal(user.password, user.id, "temporary password matches profile name");
+}
 const { units } = globalThis.CURRICULUM;
 const E = globalThis.AbjadEngine;
 const appSource = read("app.js");
@@ -106,6 +113,17 @@ assert.equal(E.nextStreak(null, "2026-11-19", 0), 1, "first day");
 assert.equal(E.nextStreak("2026-11-19", "2026-11-19", 3), 3, "same day");
 assert.equal(E.nextStreak("2026-11-18", "2026-11-19", 3), 4, "consecutive day");
 assert.equal(E.nextStreak("2026-11-01", "2026-11-19", 3), 1, "gap resets");
+
+const days = {};
+for (let i = 0; i < 7; i += 1) {
+  const date = new Date("2026-11-20T00:00:00Z");
+  date.setUTCDate(date.getUTCDate() - i);
+  days[date.toISOString().slice(0, 10)] = 600;
+}
+assert.equal(E.qualifiedStreak(days, "2026-11-20"), 7, "seven 10-min days");
+assert.equal(E.camelsFromStreak(days, "2026-11-20"), 1, "one camel after seven days");
+assert.equal(E.qualifiedStreak({ ...days, "2026-11-20": 599 }, "2026-11-20"), 6, "partial day breaks streak");
+assert.equal(E.qualifiedStreak({ ...days, "2026-11-13": 0 }, "2026-11-20"), 7, "gap stops counting");
 
 const done = { "letters-1": [0, 1] };
 assert.equal(E.unitPercent(done, "letters-1"), 50);

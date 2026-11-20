@@ -41,6 +41,8 @@
     <h2>App</h2>
     <ul>
       <li><a href="index.html">Landing / Bogga hore</a></li>
+      <li><a href="index.html#/login">Gal / Log in (profiles)</a></li>
+      <li><a href="index.html#/leaderboard">Tartan / Leaderboard</a></li>
       <li><a href="index.html#/learn">Cutubabka / Units</a></li>
       <li><a href="index.html#/lesson/letters-1/0">Xarfaha 1 — Baro</a></li>
       <li><a href="index.html#/lesson/food/3">Cunto — Wadahadal</a></li>
@@ -66,7 +68,8 @@
     `</ul></section>`
   ).join("");
   document.getElementById("reset").addEventListener("click", () => {
-    if (confirm("Horumarka XP iyo streak ma tirtirayaa?")) {
+    if (confirm("Profiles, XP, streak iyo geel — dhammaan ma tirtirayaa?")) {
+      localStorage.removeItem("abjad.v2");
       localStorage.removeItem("abjad.v1");
       location.reload();
     }
