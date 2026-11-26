@@ -151,6 +151,28 @@ Xarfaha waxay leeyihiin **qaabab** (isolated/initial/medial/final) iyo **tusaale
 - Xogtu waa **local** (localStorage) — server ma jiro, marka passphrase-ku qalabkan ayuu ku xiran yahay.
 - Passphrase la iloobay: DevTools → Application → Local Storage → `abjad.v2` → `users` → tirtir `pwh`-ga profile-kaas (wuu ku weydiin doonaa mid cusub), ama `links.html` → reset (wax walba tirtiraya).
 
+### Email accounts (optional)
+
+Login-ka email-ka wuxuu shaqeeyaa kaliya marka `auth-config.js` la buuxiyo; haddii kale qaybta email-ka waa qarsoon dahay oo profile-passphrase ayaa kaliya shaqeeya.
+
+1. Samee project bilaash ah [supabase.com](https://supabase.com) → **Authentication → Providers → Email** (daar).
+2. **Authentication → URL Configuration**:
+   - Site URL: `https://faratoon.github.io/Abjad/`
+   - Redirect URLs: `https://faratoon.github.io/Abjad/**` iyo `http://localhost:8090/**`
+3. **Project Settings → API** → `Project URL` iyo `anon public` key ku dar `auth-config.js`:
+
+```js
+globalThis.ABJAD_AUTH = {
+  url: "https://YOURPROJECT.supabase.co",
+  key: "eyJhbGciOi..."
+};
+```
+
+- `anon` key waa public (ROW LEVEL SECURITY ayaa ilaalinaysa xogta); `service_role` key **waligaa** ha gelin frontend-ka.
+- Progress-ka (XP, geel) wali waa local; cloud sync wuxuu u baahan yahay table + RLS (stanza xigta haddii la rabo).
+- Signup-ka email confirmation wuxuu u baahan yahay SMTP (Supabase free tier ~2 email/hour).
+
+
 ### Leaderboard & geel
 
 - Bogga: `#/leaderboard` (ama 🏆 header-ka).

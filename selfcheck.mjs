@@ -13,6 +13,8 @@ await import("./curriculum.js");
 await import("./engine.js");
 await import("./users.js");
 await import("./passphrase.js");
+await import("./auth-config.js");
+await import("./auth.js");
 
 const I18N = globalThis.I18N;
 const USERS = globalThis.ABJAD_USERS;
@@ -21,6 +23,9 @@ assert.deepEqual(USERS.map((u) => u.name), ["Barwaaqo", "Yasin", "Yahye", "Yasir
 for (const user of USERS) {
   assert.ok(!("password" in user), "no plaintext passwords in profile seeds");
 }
+
+assert.equal(globalThis.ABJAD_AUTH, null, "auth config ships unconfigured");
+assert.equal(globalThis.AbjadAuth, null, "email auth stays off until configured");
 
 const P = globalThis.AbjadPass;
 assert.equal(P.min, 6, "minimum passphrase length");

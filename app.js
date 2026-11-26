@@ -45,6 +45,7 @@
       name: base.name,
       avatar: typeof raw.avatar === "string" && raw.avatar ? raw.avatar : base.avatar,
       pwh: validPwh(raw.pwh) ? raw.pwh : null,
+      account: raw.account === true,
       xp: Math.max(0, Number(raw.xp) || 0),
       streak: Math.max(0, Number(raw.streak) || 0),
       lastDay: typeof raw.lastDay === "string" ? raw.lastDay : null,
@@ -68,6 +69,11 @@
       const users = {};
       seeds.forEach((seed) => {
         users[seed.id] = normalizeUser(saved.users && saved.users[seed.id], seed);
+      });
+      Object.keys(saved.users || {}).forEach((id) => {
+        const raw = saved.users[id];
+        if (users[id] || !raw || raw.account !== true) return;
+        users[id] = normalizeUser(raw, { id: id, name: raw.name || id, avatar: raw.avatar || "✉️" });
       });
       return {
         lang: saved.lang === "so" ? "so" : "en",
@@ -311,6 +317,15 @@
           </form>`}
           <p class="login-error" id="login-error" role="alert"></p>
           <p class="login-hint">${t("login.hint")}</p>
+          ${window.AbjadAuth ? `
+          <hr class="auth-sep">
+          <p class="field-label">${t("auth.title")}</p>
+          <form class="login-form" data-form="email">
+            <input name="email" type="email" autocomplete="email" placeholder="${t("auth.email")}" required>
+            <input name="password" type="password" autocomplete="current-password" placeholder="${t("auth.password")}" required>
+            <button class="btn btn-primary btn-block" type="submit" data-mode="signin">${t("auth.signIn")}</button>
+            <button class="btn btn-block" type="submit" data-mode="signup">${t("auth.signUp")}</button>
+          </form>` : ""}
           <a class="back-link" href="#/">← ${t("login.back")}</a>
         </div>
       </main>`;
@@ -698,6 +713,7 @@
       return;
     }
     if (action === "logout") {
+      if (window.AbjadAuth) window.AbjadAuth.signOut();
       db.currentUser = null;
       saveState();
       state = null;
@@ -845,6 +861,49 @@
   });
 
   app.addEventListener("submit", function (event) {
+    const emailForm = event.target.closest('[data-form="email"]');
+    if (emailForm) {
+      event.preventDefault();
+      if (!window.AbjadAuth) return;
+      const error = document.getElementById("login-error");
+      const emailEl = emailForm.querySelector('input[name="email"]');
+      const passEl = emailForm.querySelector('input[name="password"]');
+      const email = (emailEl && emailEl.value ? emailEl.value : "").trim();
+      const pass = passEl && passEl.value ? passEl.value : "";
+      const mode = (event.submitter && event.submitter.dataset.mode) || "signin";
+      const buttons = emailForm.querySelectorAll("button");
+      const unlock = function () {
+        Array.prototype.forEach.call(buttons, function (b) { b.disabled = false; });
+      };
+      if (!email || email.indexOf("@") < 1) {
+        if (error) error.textContent = t("auth.needEmail");
+        return;
+      }
+      if (pass.length < KDF_MIN) {
+        if (error) error.textContent = t("auth.weak");
+        return;
+      }
+      Array.prototype.forEach.call(buttons, function (b) { b.disabled = true; });
+      const call = mode === "signup"
+        ? window.AbjadAuth.signUp(email, pass)
+        : window.AbjadAuth.signIn(email, pass);
+      call.then(function (data) {
+        if (mode === "signup" && (!data || !data.access_token)) {
+          if (error) error.textContent = t("auth.confirmEmail");
+          unlock();
+          return;
+        }
+        const user = mode === "signup" ? data.user : data;
+        if (!user || !user.id) throw new Error("no user");
+        loginAccount(user, email);
+      }).catch(function (err) {
+        const offline = !err || err.name === "TypeError";
+        if (error) error.textContent = offline ? t("auth.error") : (err.message || t("auth.error"));
+        unlock();
+      });
+      return;
+    }
+
     const form = event.target.closest('[data-form="login"]');
     if (!form) return;
     event.preventDefault();
@@ -893,6 +952,27 @@
       if (submit) submit.disabled = false;
     });
   });
+
+  function loginAccount(user, email) {
+    const uid = "acc-" + user.id;
+    const local = (email || user.email || "").toLowerCase().split("@")[0].replace(/[^a-z0-9._-]/g, "") || "Account";
+    if (!db.users[uid]) {
+      db.users[uid] = normalizeUser(
+        { id: uid, name: local, avatar: "✉️", account: true },
+        { id: uid, name: local, avatar: "✉️" });
+    }
+    finishLogin(db.users[uid]);
+  }
+
+  if (window.AbjadAuth && state && state.account) {
+    window.AbjadAuth.currentUser().then(function (user) {
+      if (!user && state && state.account) {
+        db.currentUser = null;
+        state = null;
+        saveState();
+      }
+    }).catch(function () {});
+  }
 
   function finishLogin(user) {
     db.currentUser = user.id;
