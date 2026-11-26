@@ -10,6 +10,13 @@
   const app = document.getElementById("app");
   const canSpeak = "speechSynthesis" in window;
 
+  // Passphrases never leave the device; see passphrase.js.
+  const Pass = window.AbjadPass;
+  const validPwh = Pass.valid;
+  const makePwh = Pass.make;
+  const checkPwh = Pass.check;
+  const KDF_MIN = Pass.min;
+
   let db = loadDb();
   let state = db.currentUser ? db.users[db.currentUser] : null;
   let session = null;
@@ -19,7 +26,7 @@
   function newUser(seed) {
     return {
       id: seed.id, name: seed.name, avatar: seed.avatar || seed.name.charAt(0),
-      password: String(seed.password || seed.id).toLowerCase(),
+      pwh: null,
       xp: 0, streak: 0, lastDay: null, done: {}, days: {}, camels: 0
     };
   }
@@ -37,7 +44,7 @@
       id: base.id,
       name: base.name,
       avatar: typeof raw.avatar === "string" && raw.avatar ? raw.avatar : base.avatar,
-      password: typeof raw.password === "string" && raw.password ? raw.password : base.password,
+      pwh: validPwh(raw.pwh) ? raw.pwh : null,
       xp: Math.max(0, Number(raw.xp) || 0),
       streak: Math.max(0, Number(raw.streak) || 0),
       lastDay: typeof raw.lastDay === "string" ? raw.lastDay : null,
@@ -288,11 +295,20 @@
               </button>`;
             }).join("")}
           </div>
+          ${selected && !selected.pwh ? `
+          <form class="login-form" data-form="login">
+            <p class="login-hint">${t("login.setupHint")}</p>
+            <label for="password">${t("login.newPassword")}</label>
+            <input id="password" name="password" type="password" autocomplete="new-password" minlength="6" placeholder="${t("login.passwordPlaceholder")}">
+            <label for="confirm">${t("login.confirmPassword")}</label>
+            <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="6">
+            <button class="btn btn-primary btn-block" type="submit">${t("login.setupSubmit")}</button>
+          </form>` : `
           <form class="login-form" data-form="login">
             <label for="password">${t("login.password")}</label>
             <input id="password" name="password" type="password" autocomplete="current-password" placeholder="${t("login.passwordPlaceholder")}" ${selected ? "" : "disabled"}>
             <button class="btn btn-primary btn-block" type="submit" ${selected ? "" : "disabled"}>${t("login.submit")}</button>
-          </form>
+          </form>`}
           <p class="login-error" id="login-error" role="alert"></p>
           <p class="login-hint">${t("login.hint")}</p>
           <a class="back-link" href="#/">← ${t("login.back")}</a>
@@ -694,13 +710,17 @@
       const next = window.prompt(t("leader.passwordPrompt"));
       if (next === null) return;
       const clean = next.trim();
-      if (clean.length < 4) {
+      if (clean.length < KDF_MIN) {
         window.alert(t("leader.passwordShort"));
         return;
       }
-      state.password = clean.toLowerCase();
-      saveState();
-      toast(t("leader.passwordChanged"));
+      makePwh(clean).then(function (pwh) {
+        state.pwh = pwh;
+        saveState();
+        toast(t("leader.passwordChanged"));
+      }).catch(function () {
+        window.alert(t("login.error"));
+      });
       return;
     }
     if (!unit || !session) return;
@@ -829,14 +849,52 @@
     if (!form) return;
     event.preventDefault();
     const user = loginId && db.users[loginId];
+    if (!user) return;
+    const error = document.getElementById("login-error");
     const input = form.querySelector('input[name="password"]');
-    const pass = (input && input.value ? input.value : "").trim().toLowerCase();
-    if (!user || pass !== String(user.password).toLowerCase()) {
-      const error = document.getElementById("login-error");
-      if (error) error.textContent = t("login.error");
-      if (input) input.select();
+    const pass = (input && input.value ? input.value : "").trim();
+    const submit = form.querySelector('button[type="submit"]');
+
+    if (!user.pwh) {
+      const confirmField = form.querySelector('input[name="confirm"]');
+      const confirmValue = (confirmField && confirmField.value ? confirmField.value : "").trim();
+      if (pass.length < KDF_MIN) {
+        if (error) error.textContent = t("login.weak");
+        if (input) input.focus();
+        return;
+      }
+      if (pass !== confirmValue) {
+        if (error) error.textContent = t("login.mismatch");
+        if (confirmField) confirmField.focus();
+        return;
+      }
+      if (submit) submit.disabled = true;
+      makePwh(pass).then(function (pwh) {
+        user.pwh = pwh;
+        finishLogin(user);
+      }).catch(function () {
+        if (error) error.textContent = t("login.error");
+        if (submit) submit.disabled = false;
+      });
       return;
     }
+
+    if (submit) submit.disabled = true;
+    checkPwh(pass, user.pwh).then(function (ok) {
+      if (!ok) {
+        if (error) error.textContent = t("login.error");
+        if (input) input.select();
+        if (submit) submit.disabled = false;
+        return;
+      }
+      finishLogin(user);
+    }).catch(function () {
+      if (error) error.textContent = t("login.error");
+      if (submit) submit.disabled = false;
+    });
+  });
+
+  function finishLogin(user) {
     db.currentUser = user.id;
     state = user;
     saveState();
@@ -844,7 +902,7 @@
     loginId = null;
     toast(t("login.welcome", { name: user.name }));
     location.hash = "#/learn";
-  });
+  }
 
   function requireAuth() {
     if (state) return true;

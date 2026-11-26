@@ -12,14 +12,27 @@ await import("./so.js");
 await import("./curriculum.js");
 await import("./engine.js");
 await import("./users.js");
+await import("./passphrase.js");
 
 const I18N = globalThis.I18N;
 const USERS = globalThis.ABJAD_USERS;
 assert.equal(USERS.length, 4, "four kid profiles");
 assert.deepEqual(USERS.map((u) => u.name), ["Barwaaqo", "Yasin", "Yahye", "Yasir"]);
 for (const user of USERS) {
-  assert.equal(user.password, user.id, "temporary password matches profile name");
+  assert.ok(!("password" in user), "no plaintext passwords in profile seeds");
 }
+
+const P = globalThis.AbjadPass;
+assert.equal(P.min, 6, "minimum passphrase length");
+const h1 = await P.make("abjad-test-pass");
+assert.ok(h1.salt && h1.hash && h1.iter === P.iter, "pbkdf2 hash shape");
+assert.equal(await P.check("abjad-test-pass", h1), true, "correct passphrase verifies");
+assert.equal(await P.check("abjad-test-pasS", h1), false, "wrong passphrase rejected");
+const h2 = await P.make("abjad-test-pass");
+assert.notEqual(h1.salt, h2.salt, "salt is random per hash");
+assert.equal(await P.check("abjad-test-pass", h2), true, "independent hash verifies");
+assert.equal(await P.check("x", { salt: "AA==", hash: "AA==" }), false, "forged short hash rejected");
+assert.equal(await P.check("x", null), false, "missing hash rejected");
 const { units } = globalThis.CURRICULUM;
 const E = globalThis.AbjadEngine;
 const appSource = read("app.js");

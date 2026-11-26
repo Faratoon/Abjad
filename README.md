@@ -24,7 +24,7 @@ ABJAD waa **Progressive Web App (PWA)** lagu baranayo **Carabiga caadiga ah (Mod
 
 ## 1. Waxa ku jira
 
-- **4 profile carruur** — Barwaaqo, Yasin, Yahye, Yasir — mid kastaa leh password ku meel gaadh ah.
+- **4 profile carruur** — Barwaaqo, Yasin, Yahye, Yasir — mid kastaa leh passphrase u gaar ah (PBKDF2 hash, qalabka gudihiisa).
 - **Leaderboard & geel** — 7 maalmood × 10 daqiiqo = neef geel 🐪; XP iyo streak-na waa la tartamaa.
 - **7 cutub, 58 shay, 28 xaraf Carabi** oo dhamaystiran.
 - **4 marxaladood cutub kasta:**
@@ -54,7 +54,7 @@ cd ~/abjad
 ./serve.sh
 ```
 
-Kadib fur: **<http://localhost:8090/>** → **Gal** → dooro profile → password-ka waa magaca profile-ka (tusaale `barwaaqo`).
+Kadib fur: **<http://localhost:8090/>** → **Gal** → dooro profile → markii ugu horreysa waxaad dhigataa passphrase-kaaga (ugu yaraan 6 xaraf).
 
 `serve.sh` waa idempotent: haddii server hore u shaqaynayo, isma dilo; haddii kale wuu kiciyaa oo wuxuu daabacaa linkiyada.
 
@@ -135,20 +135,21 @@ Xarfaha waxay leeyihiin **qaabab** (isolated/initial/medial/final) iyo **tusaale
 
 ### Profiles-ka carruurta
 
-| Magac | Username | Password ku meel gaadhka |
-|---|---|---|
-| Barwaaqo | `barwaaqo` | `barwaaqo` |
-| Yasin | `yasin` | `yasin` |
-| Yahye | `yahye` | `yahye` |
-| Yasir | `yasir` | `yasir` |
+| Magac | Username |
+|---|---|
+| Barwaaqo | `barwaaqo` |
+| Yasin | `yasin` |
+| Yahye | `yahye` |
+| Yasir | `yasir` |
 
-- Login: `#/login` → dooro profile-ka → geli password-ka.
-- Password-ku waa **case-insensitive** (`Barwaaqo` = `barwaaqo`).
-- Beddel password: leaderboard → **Beddel password** (ugu yaraan 4 xaraf).
+- Login: `#/login` → dooro profile-ka → geli passphrase-ka.
+- **Gelitaanka koowaad**: profile kastaa wuxuu leeyahay passphrase u gaar ah oo adiga dhigta (ugu yaraan 6 xaraf) — ma jiro password wadaag ah.
+- Passphrase-ka waxaa lagu kaydiyaa **PBKDF2-SHA256** (150,000 round, salt random); plaintext lama kaydiyo (`passphrase.js`).
+- Beddel passphrase: leaderboard → **Beddel passphrase**.
 - Logout: badhanka 🚪 ee header-ka.
 - Profile kastaa wuxuu leeyahay XP, streak, `done`, `days` iyo `camels` **gaar**.
-- Xogtu waa **local** (localStorage); password-yadu plaintext ayay ku kaydsan yihiin — ha isticmaalin password qiiimo leh.
-- Password la iloobay: DevTools → Application → Local Storage → `abjad.v2` → `users` → `password`, ama `links.html` → reset (wax walba tirtiraya).
+- Xogtu waa **local** (localStorage) — server ma jiro, marka passphrase-ku qalabkan ayuu ku xiran yahay.
+- Passphrase la iloobay: DevTools → Application → Local Storage → `abjad.v2` → `users` → tirtir `pwh`-ga profile-kaas (wuu ku weydiin doonaa mid cusub), ama `links.html` → reset (wax walba tirtiraya).
 
 ### Leaderboard & geel
 
@@ -174,7 +175,7 @@ abjad/
 ├── app.js                  # router, views, state, event handlers
 ├── engine.js               # quiz/write generators, streak, camel days
 ├── curriculum.js           # xogta cutubada (units/cards/dialogues)
-├── users.js                # 4 profiles (magac, password, avatar)
+├── users.js                # 4 profiles (magac, avatar)
 ├── i18n.js                 # container-ka I18N
 ├── en.js                   # 130 string Ingiriisi
 ├── so.js                   # 130 string Soomaali
@@ -298,7 +299,8 @@ Key: **`abjad.v2`** (qalab kasta oo profile ah):
   "users": {
     "barwaaqo": {
       "id": "barwaaqo", "name": "Barwaaqo", "avatar": "🌸",
-      "password": "barwaaqo", "xp": 145, "streak": 4,
+      "pwh": { "salt": "…", "hash": "…", "iter": 150000 },
+      "xp": 145, "streak": 4,
       "lastDay": "2026-11-19",
       "done": { "letters-1": [0, 1, 2, 3] },
       "days": { "2026-11-20": 600 },
@@ -423,7 +425,7 @@ Layout: mobile-first, hero leh gees amber ah iyo dhibco yar; cards radius 24px; 
 | Wax hore ayaa muuqda (cache) | Hard reload; SW unregister; kordhi `CACHE` version |
 | Cod Carabi ma maqalayo | Browser voice-ka `ar-SA` ma jiro; qoraalka/transliteration isticmaal |
 | Emoji boxes | Qalabka font emoji ma leh (Windows/Android way leeyihiin) |
-| Password la iloobay | DevTools → `abjad.v2` → `users` → `password`, ama hub reset |
+| Passphrase la iloobay | DevTools → `abjad.v2` → `users` → tirtir `pwh`-ga, ama hub reset |
 | Geel ma soo baxo | Hubi 7 maalmood × 600s; daqiiqadaha waxaa la tiriyaa `#/learn`/`#/lesson` oo tab visible |
 | Leaderboard 0/7 | Daqiiqadaha maanta wali kama gaarin 10; profile-ka saxda ah geli |
 | Font Carabi qaldan | `fonts/` folder waa in uu la socdaa; hard reload |
@@ -471,7 +473,7 @@ cd abjad
 
 Haddii aad faafiso version cusub, link-ka repo-ga asalka ah ku dar (credit). Font-ka **Noto Naskh Arabic** wuxuu leeyahay laysin gaar ah (OFL 1.1, `fonts/OFL.txt`).
 
-Ammaan: password-yada iyo xogta profile-ku waa localStorage, ma aha server; ha gelin xog dhab ah oo xasaasi ah.
+Ammaan: xogta profile-ka iyo passphrase hash-ka (PBKDF2) waa localStorage — server ma jiro, laakiin qof qalabkaaga heli karaa wuu arki karaa xogta. Ha gelin xog dhab ah oo xasaasi ah.
 
 ---
 
