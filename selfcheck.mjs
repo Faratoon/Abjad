@@ -24,8 +24,14 @@ for (const user of USERS) {
   assert.ok(!("password" in user), "no plaintext passwords in profile seeds");
 }
 
-assert.equal(globalThis.ABJAD_AUTH, null, "auth config ships unconfigured");
-assert.equal(globalThis.AbjadAuth, null, "email auth stays off until configured");
+const AUTH = globalThis.ABJAD_AUTH;
+assert.ok(AUTH && /^https:\/\/[a-z0-9]+\.supabase\.co$/.test(AUTH.url), "auth config points at a Supabase project");
+assert.ok(!/sb_secret_|service_role/.test(AUTH.key), "frontend config never holds a secret key");
+const AUTH_API = globalThis.AbjadAuth;
+assert.ok(AUTH_API, "email auth enabled once configured");
+for (const method of ["signUp", "signIn", "signOut", "currentUser", "session"]) {
+  assert.equal(typeof AUTH_API[method], "function", "auth method " + method);
+}
 
 const P = globalThis.AbjadPass;
 assert.equal(P.min, 6, "minimum passphrase length");

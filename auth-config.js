@@ -1,11 +1,7 @@
 /* Supabase project for ABJAD email accounts.
- * Fill both values from Supabase → Project Settings → API.
- * The anon key is public by design (row access is enforced by RLS).
- * While this is null, the app runs profile-passphrase mode only. */
-globalThis.ABJAD_AUTH = null;
-/* Example:
+ * Publishable key is public by design (RLS enforces data access).
+ * Never put a secret/service_role key in this file. */
 globalThis.ABJAD_AUTH = {
-  url: "https://YOURPROJECT.supabase.co",
-  key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  url: "https://wyzwvnjxxecyzmydtpia.supabase.co",
+  key: "sb_publishable_lveN_sraJf27sIcy_s9xDw_lUHPSvnp"
 };
-*/
