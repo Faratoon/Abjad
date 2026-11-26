@@ -124,6 +124,8 @@ globalThis.I18N.so = {
   "auth.weak": "Password-ku waa in uu leeyahay ugu yaraan 6 xaraf.",
   "auth.confirmEmail": "Hubi email-kaaga si aad u xaqiijiso akoonka, kadab gal.",
   "auth.error": "Ma geli karin. Hubi email-ka iyo password-ka.",
+  "auth.guest": "Sii wad marti ahaan",
+  "auth.guestName": "Marti",
   "login.welcome": "Soo dhawow, {name}!",
   "login.back": "Ku noqo bogga hore",
   "learn.welcome": "Soo dhawow, {name}",

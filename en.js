@@ -124,6 +124,8 @@ globalThis.I18N.en = {
   "auth.weak": "Password must be at least 6 characters.",
   "auth.confirmEmail": "Check your email to confirm the account, then sign in.",
   "auth.error": "Could not sign in. Check your email and password.",
+  "auth.guest": "Continue as guest",
+  "auth.guestName": "Guest",
   "login.welcome": "Welcome, {name}!",
   "login.back": "Back to home",
   "learn.welcome": "Welcome back, {name}",

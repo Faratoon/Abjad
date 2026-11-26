@@ -70,6 +70,11 @@
     return data || null;
   }
 
+  async function signInAnonymously() {
+    const data = await request("/auth/v1/signup", { method: "POST", body: {} });
+    return store(data);
+  }
+
   async function signIn(email, password) {
     const data = await request("/auth/v1/token?grant_type=password", {
       method: "POST",
@@ -111,5 +116,5 @@
     }
   }
 
-  globalThis.AbjadAuth = { signUp, signIn, signOut, currentUser, session: () => session };
+  globalThis.AbjadAuth = { signUp, signIn, signInAnonymously, signOut, currentUser, session: () => session };
 })();

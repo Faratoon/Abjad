@@ -283,8 +283,8 @@
       return;
     }
     document.title = "ABJAD — " + t("login.title");
-    const ids = Object.keys(db.users);
-    const selected = loginId && db.users[loginId];
+    const ids = Object.keys(db.users).filter((id) => !db.users[id].account);
+    const selected = loginId && db.users[loginId] && !db.users[loginId].account ? db.users[loginId] : null;
     app.innerHTML = authHeader() + `
       <main class="auth-wrap">
         <div class="auth-card card">
@@ -325,7 +325,8 @@
             <input name="password" type="password" autocomplete="current-password" placeholder="${t("auth.password")}" required>
             <button class="btn btn-primary btn-block" type="submit" data-mode="signin">${t("auth.signIn")}</button>
             <button class="btn btn-block" type="submit" data-mode="signup">${t("auth.signUp")}</button>
-          </form>` : ""}
+          </form>
+          <button class="btn btn-block" type="button" data-action="guest">${t("auth.guest")}</button>` : ""}
           <a class="back-link" href="#/">← ${t("login.back")}</a>
         </div>
       </main>`;
@@ -712,6 +713,19 @@
       renderLogin();
       return;
     }
+    if (action === "guest") {
+      if (!window.AbjadAuth) return;
+      const error = document.getElementById("login-error");
+      el.disabled = true;
+      window.AbjadAuth.signInAnonymously().then(function (user) {
+        if (!user || !user.id) throw new Error("no user");
+        loginAccount(user, "");
+      }).catch(function () {
+        if (error) error.textContent = t("auth.error");
+        el.disabled = false;
+      });
+      return;
+    }
     if (action === "logout") {
       if (window.AbjadAuth) window.AbjadAuth.signOut();
       db.currentUser = null;
@@ -955,11 +969,14 @@
 
   function loginAccount(user, email) {
     const uid = "acc-" + user.id;
-    const local = (email || user.email || "").toLowerCase().split("@")[0].replace(/[^a-z0-9._-]/g, "") || "Account";
+    const address = (email || user.email || "").toLowerCase();
+    const handle = address ? address.split("@")[0].replace(/[^a-z0-9._-]/g, "") : "";
+    const name = handle || t("auth.guestName") + " " + String(user.id).slice(0, 4);
+    const avatar = handle ? "✉️" : "👤";
     if (!db.users[uid]) {
       db.users[uid] = normalizeUser(
-        { id: uid, name: local, avatar: "✉️", account: true },
-        { id: uid, name: local, avatar: "✉️" });
+        { id: uid, name: name, avatar: avatar, account: true },
+        { id: uid, name: name, avatar: avatar });
     }
     finishLogin(db.users[uid]);
   }
